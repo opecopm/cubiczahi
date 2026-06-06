@@ -134,9 +134,7 @@
                                                     <button wire:click="edit('{{ $user->id }}')" class="dropdown-item">Edit</button>
                                                 @endif
                                                 @if(auth()->user()->can('delete_users'))
-                                                    <button wire:click="confirmDelete('{{ $user->id }}')"
-                                                            wire:confirm="Are you sure you want to delete this user?"
-                                                            class="dropdown-item text-danger">Delete</button>
+                                                    <button wire:click="confirmDelete('{{ $user->id }}')" class="dropdown-item text-danger">Delete</button>
                                                 @endif
                                             </div>
                                         </div>
@@ -235,22 +233,23 @@
         </div>
     </div>
 
-    {{-- Delete Confirmation Modal --}}
-    <div class="modal modal-blur fade @if($showDeleteModal ?? false) show d-block @endif" tabindex="-1" role="dialog" style="background: rgba(0,0,0,0.5);" @if($showDeleteModal ?? false) aria-modal="true" @else aria-hidden="true" @endif>
-        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal fade @if($deleteId) show d-block @endif" tabindex="-1" role="dialog" style="background: rgba(0, 0, 0, 0.5);" @if($deleteId) aria-modal="true" @else aria-hidden="true" @endif>
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Confirmation</h5>
+                    <button type="button" class="btn-close" wire:click="cancelDelete"></button>
+                </div>
                 <div class="modal-body">
-                    <div class="modal-title">Are you sure?</div>
-                    <div>Do you really want to delete this user?</div>
+                    <p>Are you sure you?</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-link link-secondary me-auto" wire:click="$set('showDeleteModal', false)">Cancel</button>
-                    <button type="button" class="btn btn-danger" wire:click="delete">Yes, delete</button>
+                    <button type="button" class="btn btn-secondary" wire:click="cancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" wire:click="delete">Delete</button>
                 </div>
             </div>
         </div>
     </div>
-
     <script>
         document.addEventListener('click', function (e) {
             var btn = e.target.closest('.copy-user-id');

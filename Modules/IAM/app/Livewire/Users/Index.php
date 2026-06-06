@@ -15,7 +15,7 @@ use Spatie\Permission\Models\Role;
 
 class Index extends Component
 {
-    use WithFileUploads,WithFilters, WithModalTrait, WithPagination, WithSorting;
+    use WithFileUploads, WithFilters, WithModalTrait, WithPagination, WithSorting;
 
     protected $paginationTheme = 'bootstrap';
 
@@ -102,6 +102,7 @@ class Index extends Component
         $this->validate();
         if ($this->password) {
             $user = User::create([
+                'type' => 'backend',
                 'first_name' => $this->first_name,
                 'last_name' => $this->last_name,
                 'email' => $this->email,
@@ -170,9 +171,46 @@ class Index extends Component
         $this->resetInputFields();
     }
 
+    public function confirmDelete($id)
+    {
+        $this->deleteId = $id;
+    }
+
     public function delete()
     {
-        User::find($this->deleteId)->delete();
+        $user = User::find($this->deleteId);
+        if (!$user) {
+            session()->flash('error', 'User not found.');
+            $this->closeModal();
+            return;
+        }
+
+        // Prevent self-deletion
+        if (auth()->id() === $user->id) {
+            session()->flash('error', 'You cannot delete your own user account.');
+            return;
+        }
+
+        // Prevent deletion if user is the only admin
+        $adminRole = \Spatie\Permission\Models\Role::where('name', 'admin')->first();
+        if ($adminRole && $user->hasRole('admin')) {
+            $adminCount = User::role('admin')->count();
+            if ($adminCount <= 1) {
+                session()->flash('error', 'Cannot delete the last admin user. Assign admin role to another user first.');
+                return;
+            }
+        }
+
+        // Detach from pivot tables
+        $user->companies()->detach();
+        $user->locations()->detach();
+
+        // Delete related media (if using spatie media library)
+        $user->clearMediaCollection('avatars');
+
+        // Delete the user
+        $user->delete();
+
         session()->flash('message', 'User deleted successfully.');
         $this->closeModal();
     }

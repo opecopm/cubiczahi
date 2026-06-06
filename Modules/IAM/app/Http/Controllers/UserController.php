@@ -74,6 +74,33 @@ class UserController extends Controller
     public function destroy($id)
     {
         $this->authorize('delete_users');
-        //
+
+        $user = User::findOrFail($id);
+
+        // Prevent self-deletion
+        if (auth()->id() === $user->id) {
+            return redirect()->back()->with('error', 'You cannot delete your own user account.');
+        }
+
+        // Prevent deletion if user is the only admin
+        $adminRole = \Spatie\Permission\Models\Role::where('name', 'admin')->first();
+        if ($adminRole && $user->hasRole('admin')) {
+            $adminCount = User::role('admin')->count();
+            if ($adminCount <= 1) {
+                return redirect()->back()->with('error', 'Cannot delete the last admin user. Assign admin role to another user first.');
+            }
+        }
+
+        // Detach from pivot tables
+        $user->companies()->detach();
+        $user->locations()->detach();
+
+        // Delete related media (if using spatie media library)
+        $user->clearMediaCollection('avatars');
+
+        // Delete the user
+        $user->delete();
+
+        return redirect()->back()->with('success', 'User deleted successfully.');
     }
 }
