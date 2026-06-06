@@ -1,0 +1,14 @@
+{
+    "IAM": true,
+    "System": true,
+    "Business": true,
+    "Global": true,
+    "CRM": true,
+    "Purchasing": false,
+    "Selling": true,
+    "Inventory": true,
+    "Accounting": true,
+    "HRM": false,
+    "MediaGallery": true,
+    "CMS": true
+}

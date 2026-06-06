@@ -1,0 +1,11 @@
+{
+    "name": "MediaGallery",
+    "alias": "mediagallery",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\MediaGallery\\Providers\\MediaGalleryServiceProvider"
+    ],
+    "files": []
+}
