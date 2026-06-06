@@ -13,7 +13,10 @@
             {{ __('Profile') }}
         </a>
         <div class="dropdown-divider"></div>
-        <button wire:click="logout" class="dropdown-item">
+        <form id="topbar-logout-form" action="{{ route('admin.logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
+        <button type="button" onclick="document.getElementById('topbar-logout-form').submit();" class="dropdown-item">
             {{ __('Log Out') }}
         </button>
     </div>
