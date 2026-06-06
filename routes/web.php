@@ -10,6 +10,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'user_ty
     Route::get('dashboard', Dashboard::class)->name('dashboard');
     Route::get('profile', Profile::class)->name('profile');
 
+    Route::post('logout', function () {
+        \Illuminate\Support\Facades\Auth::guard('web')->logout();
+        \Illuminate\Support\Facades\Session::invalidate();
+        \Illuminate\Support\Facades\Session::regenerateToken();
+        return redirect()->route('admin.login');
+    })->name('logout');
+
     Route::post('notifications/mark-all-read', function () {
         $user = auth()->user();
         if ($user) {
@@ -55,11 +62,11 @@ Route::get('/media-content/{filename}', function ($filename) {
     if (! $media) {
         $media = \Spatie\MediaLibrary\MediaCollections\Models\Media::where('name', $filename)->first();
     }
-    
+
     if (! $media || ! file_exists($media->getPath())) {
         abort(404);
     }
-    
+
     return response()->file($media->getPath(), [
         'Content-Type' => $media->mime_type ?: 'application/octet-stream',
         'Content-Disposition' => 'inline; filename="' . $media->file_name . '"',
