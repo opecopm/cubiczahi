@@ -1,0 +1,77 @@
+{
+  "_bootstrap.bundle.min-feVeGprF.js": {
+    "file": "assets/bootstrap.bundle.min-feVeGprF.js",
+    "name": "bootstrap.bundle.min",
+    "imports": [
+      "_chunk-CiYXI8JR.js"
+    ]
+  },
+  "_chunk-CiYXI8JR.js": {
+    "file": "assets/chunk-CiYXI8JR.js",
+    "name": "chunk"
+  },
+  "node_modules/@tabler/icons-webfont/dist/fonts/tabler-icons.ttf": {
+    "file": "assets/tabler-icons-rLyeKVyk.ttf",
+    "src": "node_modules/@tabler/icons-webfont/dist/fonts/tabler-icons.ttf"
+  },
+  "node_modules/@tabler/icons-webfont/dist/fonts/tabler-icons.woff": {
+    "file": "assets/tabler-icons-CY4k7kX9.woff",
+    "src": "node_modules/@tabler/icons-webfont/dist/fonts/tabler-icons.woff"
+  },
+  "node_modules/@tabler/icons-webfont/dist/fonts/tabler-icons.woff2": {
+    "file": "assets/tabler-icons-Dgmkf7qS.woff2",
+    "src": "node_modules/@tabler/icons-webfont/dist/fonts/tabler-icons.woff2"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DoNxrOgi.css",
+    "src": "resources/css/app.css"
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-OpFUQSBC.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_chunk-CiYXI8JR.js"
+    ]
+  },
+  "resources/views/themes/laundry-one/assets/css/app.css": {
+    "file": "assets/app-ZvCmjINU.css",
+    "src": "resources/views/themes/laundry-one/assets/css/app.css"
+  },
+  "resources/views/themes/laundry-one/assets/js/app.js": {
+    "file": "assets/app-BqWSVRJR.js",
+    "name": "app",
+    "src": "resources/views/themes/laundry-one/assets/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_bootstrap.bundle.min-feVeGprF.js"
+    ]
+  },
+  "resources/views/themes/supermarket/assets/css/app.css": {
+    "file": "assets/app-9NJsMX5o.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/views/themes/supermarket/assets/css/app.css",
+    "isEntry": true,
+    "css": [
+      "assets/app-ZvCmjINU.css"
+    ],
+    "assets": [
+      "assets/tabler-icons-Dgmkf7qS.woff2",
+      "assets/tabler-icons-CY4k7kX9.woff",
+      "assets/tabler-icons-rLyeKVyk.ttf"
+    ]
+  },
+  "resources/views/themes/supermarket/assets/js/app.js": {
+    "file": "assets/app-Cd5mQD09.js",
+    "name": "app",
+    "src": "resources/views/themes/supermarket/assets/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_bootstrap.bundle.min-feVeGprF.js"
+    ]
+  }
+}
