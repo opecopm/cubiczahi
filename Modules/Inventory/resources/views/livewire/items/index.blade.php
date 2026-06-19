@@ -204,7 +204,7 @@
                                     <td>{{ \Modules\Inventory\Models\Item::TYPE_SELECT[$item->type] ?? $item->type }}</td>
                                     <td>{{ $item->category->name ?? '' }}</td>
                                     <td>{{ $item->model_number ?? '' }}</td>
-                                    <td>{{ $item->getTranslation('name', 'en') }}</td>
+                                    <td>{{ collect($item->getTranslations('name'))->filter()->join(' / ') }}</td>
                                     <td class="text-end">
                                         {{ @$item->price('sell') ? $item->price('sell')->price : '—' }}
                                     </td>

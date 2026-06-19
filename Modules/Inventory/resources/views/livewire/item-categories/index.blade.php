@@ -10,10 +10,17 @@
     ])
         @can('create_item_categories')
             @slot('actions')
-                <button wire:click="openModal" class="btn btn-primary">
-                    <i class="ti ti-plus me-1"></i>
-                    Add New Category
-                </button>
+                <div class="d-flex gap-2">
+                    <button wire:click="translateCategories" wire:loading.attr="disabled" class="btn btn-outline-info">
+                        <span wire:loading wire:target="translateCategories" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <i class="ti ti-language me-1" wire:loading.remove wire:target="translateCategories"></i>
+                        Translate Categories
+                    </button>
+                    <button wire:click="openModal" class="btn btn-primary">
+                        <i class="ti ti-plus me-1"></i>
+                        Add New Category
+                    </button>
+                </div>
             @endslot
         @endcan
     @endcomponent
@@ -108,11 +115,18 @@
                             <input type="text" class="form-control" id="code" wire:model="code">
                             @error('code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-md-12">
-                            <label for="name" class="form-label">Category Name</label>
-                            <input type="text" class="form-control" id="name" wire:model="name">
-                            @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <div class="col-md-6">
+                            <label for="name_en" class="form-label">Category Name (EN)</label>
+                            <input type="text" class="form-control" id="name_en" wire:model="name.en">
+                            @error('name.en')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
+                        @foreach($active_languages as $lang)
+                        <div class="col-md-6">
+                            <label for="name_{{ $lang }}" class="form-label">Category Name ({{ strtoupper($lang) }})</label>
+                            <input type="text" class="form-control" id="name_{{ $lang }}" wire:model="name.{{ $lang }}">
+                            @error('name.'.$lang)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        @endforeach
                             @php
                                 function renderCategoryOptions($categories, $prefix = '') {
                                     foreach ($categories as $cat) {

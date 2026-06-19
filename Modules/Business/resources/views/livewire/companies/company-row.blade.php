@@ -4,7 +4,11 @@
         {!! str_repeat('<span class="text-secondary me-1">&mdash;</span>', $level) !!}
         <span class="fw-bold">{{ $company->getTranslation('name', 'en') }}</span>
     </td>
-    <td class="text-secondary">{{ $company->getTranslation('name', $secondaryLang ?? 'ar') }}</td>
+    @foreach($activeLanguages as $lang)
+        @if($lang !== 'en')
+            <td class="text-secondary">{{ $company->getTranslation('name', $lang) }}</td>
+        @endif
+    @endforeach
     <td class="text-secondary">{{ $company->code }}</td>
     <td class="text-secondary">{{ $company->crn }}</td>
     <td class="text-secondary">{{ $company->trn }}</td>
@@ -22,6 +26,6 @@
 
 @if ($company->children && $company->children->count())
     @foreach ($company->children as $childIndex => $child)
-        @include('business::livewire.companies.company-row', ['company' => $child, 'level' => $level + 1])
+        @include('business::livewire.companies.company-row', ['company' => $child, 'level' => $level + 1, 'activeLanguages' => $activeLanguages])
     @endforeach
 @endif

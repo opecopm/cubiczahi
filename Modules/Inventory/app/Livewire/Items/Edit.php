@@ -25,12 +25,14 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 use function system_setting;
+use App\Services\AI\TranslationService;
+use App\Services\AI\ItemCatalogService;
 
 class Edit extends Component
 {
     use WithAutoComplete, WithFileUploads, WithModalTrait, HasMediaManagement;
 
-    public $second_lang;
+    public array $active_languages = [];
 
     public $type;
 
@@ -138,6 +140,8 @@ class Edit extends Component
 
     public $customValues = []; // to store dynamic input values
 
+    public $aiPrompt = '';
+
     protected $queryString = ['step' => ['except' => 1]];
 
     private function getTranslatableString($model, string $field, string $locale): string
@@ -178,12 +182,15 @@ class Edit extends Component
 
     public function mount($itemId)
     {
-        $this->second_lang = system_setting('secondary_language', 'en');
+        $langs = system_setting('active_languages', ['ar']);
+        $this->active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
 
         $item = Item::findOrFail($itemId);
         $this->item = $item;
         $this->name['en'] = $item->getTranslation('name', 'en');
-        $this->name[$this->second_lang] = $item->getTranslation('name', $this->second_lang);
+        foreach ($this->active_languages as $lang) {
+            $this->name[$lang] = $item->getTranslation('name', $lang);
+        }
         $this->type = $item->type;
         $this->category_id = $item->category_id;
         $this->brand_id = $item->brand_id;
@@ -194,7 +201,7 @@ class Edit extends Component
         $this->has_variants = (bool) $item->has_variants;
         $this->slug = $item->slug;
         $this->slugManuallyEdited = filled($item->slug);
-        $locales = array_values(array_unique(['en', $this->second_lang]));
+        $locales = array_values(array_unique(array_merge(['en'], $this->active_languages)));
         foreach ($locales as $locale) {
             $this->descriptions[$locale] = $this->getTranslatableString($item, 'description', $locale);
             $this->short_descriptions[$locale] = $this->getTranslatableString($item, 'short_description', $locale);
@@ -287,9 +294,8 @@ class Edit extends Component
 
     protected function rules1()
     {
-        return [
+        $rules = [
             'name.en' => 'required|string|min:3',
-            "name.{$this->second_lang}" => 'nullable|string|min:3',
             'type' => 'required|string',
             'description' => 'nullable|string',
             'category_id' => 'required|exists:item_categories,id',
@@ -306,22 +312,125 @@ class Edit extends Component
             'model_year' => 'nullable|string',
             'serial_number' => 'nullable|string',
         ];
+
+        foreach ($this->active_languages as $lang) {
+            $rules["name.{$lang}"] = 'nullable|string|min:3';
+        }
+
+        return $rules;
     }
 
     public function updatedName($value, $key)
     {
     }
 
+    public function autoTranslate(TranslationService $translationService)
+    {
+        $englishName = $this->name['en'] ?? null;
+        if (empty(trim($englishName))) {
+            session()->flash('error', 'Please enter the Item Name (English) first.');
+            return;
+        }
+
+        foreach ($this->active_languages as $lang) {
+            if ($lang === 'en') continue;
+
+            // Only translate if empty
+            if (!empty(trim($this->name[$lang] ?? ''))) continue;
+
+            try {
+                $translatedText = $translationService->translate($englishName, $lang, 'product name');
+                if (!empty($translatedText)) {
+                    $this->name[$lang] = $translatedText;
+                }
+            } catch (\Exception $e) {
+                session()->flash('error', 'Translation failed for ' . $lang . ': ' . $e->getMessage());
+            }
+        }
+    }
+
+    public function autoTranslateDescriptions(TranslationService $translationService)
+    {
+        $englishDesc = $this->descriptions['en'] ?? null;
+        $englishShort = $this->short_descriptions['en'] ?? null;
+
+        if (empty(trim($englishDesc ?? '')) && empty(trim($englishShort ?? ''))) {
+            session()->flash('error', 'Please enter either the Description (EN) or Short Description (EN) first.');
+            return;
+        }
+
+        foreach ($this->active_languages as $lang) {
+            if ($lang === 'en') continue;
+
+            // Description
+            if (!empty(trim($englishDesc ?? '')) && empty(trim($this->descriptions[$lang] ?? ''))) {
+                try {
+                    $translatedText = $translationService->translate($englishDesc, $lang, 'product description');
+                    if (!empty($translatedText)) {
+                        $this->descriptions[$lang] = $translatedText;
+                        $this->dispatch('tinymce-content-updated', ['id' => "tiny-description-{$lang}", 'content' => $translatedText]);
+                    }
+                } catch (\Exception $e) {
+                    session()->flash('error', 'Translation failed for description ' . $lang . ': ' . $e->getMessage());
+                }
+            }
+
+            // Short Description
+            if (!empty(trim($englishShort ?? '')) && empty(trim($this->short_descriptions[$lang] ?? ''))) {
+                try {
+                    $translatedText = $translationService->translate($englishShort, $lang, 'product short description');
+                    if (!empty($translatedText)) {
+                        $this->short_descriptions[$lang] = $translatedText;
+                        $this->dispatch('tinymce-content-updated', ['id' => "tiny-short-{$lang}", 'content' => $translatedText]);
+                    }
+                } catch (\Exception $e) {
+                    session()->flash('error', 'Translation failed for short description ' . $lang . ': ' . $e->getMessage());
+                }
+            }
+        }
+    }
+
+    public function generateEnglishContent(ItemCatalogService $itemCatalogService)
+    {
+        $this->validate([
+            'aiPrompt' => 'required|string|min:3'
+        ]);
+
+        try {
+            $data = $itemCatalogService->generateItemDescriptions($this->aiPrompt);
+
+            if ($data && isset($data['description'])) {
+                $this->descriptions['en'] = $data['description'];
+                $this->dispatch('tinymce-content-updated', ['id' => 'tiny-description-en', 'content' => $data['description']]);
+            }
+            if ($data && isset($data['short_description'])) {
+                $this->short_descriptions['en'] = $data['short_description'];
+                $this->dispatch('tinymce-content-updated', ['id' => 'tiny-short-en', 'content' => $data['short_description']]);
+            }
+
+            $this->aiPrompt = '';
+            // Close modal using browser event
+            $this->dispatch('close-ai-modal');
+            session()->flash('message', 'English content generated successfully!');
+
+        } catch (\Exception $e) {
+            session()->flash('error', 'Generation failed: ' . $e->getMessage());
+        }
+    }
+
     public function saveStep1()
     {
         try {
             $this->validate($this->rules1());
+
+            $names = ['en' => $this->name['en'] ?? null];
+            foreach ($this->active_languages as $lang) {
+                $names[$lang] = $this->name[$lang] ?? ($this->name['en'] ?? null);
+            }
+
             $data = [
                 'type' => $this->type,
-                'name' => [
-                    'en' => $this->name['en'],
-                    $this->second_lang => $this->name[$this->second_lang] ?? $this->name['en'],
-                ],
+                'name' => $names,
                 'category_id' => $this->category_id,
                 'brand_id' => $this->brand_id,
                 'track_inventory' => (bool) $this->track_inventory,
@@ -463,31 +572,35 @@ class Edit extends Component
     public function saveStep4()
     {
         try {
-            $validated = $this->validate([
+            $rules = [
                 'descriptions.en' => 'nullable|string',
-                "descriptions.{$this->second_lang}" => 'nullable|string',
                 'short_descriptions.en' => 'nullable|string',
-                "short_descriptions.{$this->second_lang}" => 'nullable|string',
                 'seo_title.en' => 'nullable|string|max:255',
-                "seo_title.{$this->second_lang}" => 'nullable|string|max:255',
                 'seo_description.en' => 'nullable|string|max:1000',
-                "seo_description.{$this->second_lang}" => 'nullable|string|max:1000',
                 'seo_keywords.en' => 'nullable|string|max:1000',
-                "seo_keywords.{$this->second_lang}" => 'nullable|string|max:1000',
-            ]);
+            ];
+            foreach ($this->active_languages as $lang) {
+                $rules["descriptions.{$lang}"] = 'nullable|string';
+                $rules["short_descriptions.{$lang}"] = 'nullable|string';
+                $rules["seo_title.{$lang}"] = 'nullable|string|max:255';
+                $rules["seo_description.{$lang}"] = 'nullable|string|max:1000';
+                $rules["seo_keywords.{$lang}"] = 'nullable|string|max:1000';
+            }
+            $validated = $this->validate($rules);
+
+            $descriptions = ['en' => $this->descriptions['en'] ?? null];
+            $short_descriptions = ['en' => $this->short_descriptions['en'] ?? null];
+            foreach ($this->active_languages as $lang) {
+                $descriptions[$lang] = $this->descriptions[$lang] ?? null;
+                $short_descriptions[$lang] = $this->short_descriptions[$lang] ?? null;
+            }
 
             $this->item->update([
-                'description' => [
-                    'en' => $this->descriptions['en'] ?? null,
-                    $this->second_lang => $this->descriptions[$this->second_lang] ?? null,
-                ],
-                'short_description' => [
-                    'en' => $this->short_descriptions['en'] ?? null,
-                    $this->second_lang => $this->short_descriptions[$this->second_lang] ?? null,
-                ],
+                'description' => $descriptions,
+                'short_description' => $short_descriptions,
             ]);
 
-            $locales = array_values(array_unique(['en', $this->second_lang]));
+            $locales = array_values(array_unique(array_merge(['en'], $this->active_languages)));
             foreach ($locales as $locale) {
                 $seoPairs = [
                     "seo_title_{$locale}" => $this->seo_title[$locale] ?? '',

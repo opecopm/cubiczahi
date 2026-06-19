@@ -16,8 +16,13 @@
 
             {{-- Names --}}
             <div class="card mb-3">
-                <div class="card-header">
-                    <h4 class="card-title">Names</h4>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">Names</h4>
+                    <button type="button" class="btn btn-sm btn-outline-info" wire:click="autoTranslate" wire:loading.attr="disabled">
+                        <span wire:loading wire:target="autoTranslate" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        <i class="ti ti-language me-1" wire:loading.remove wire:target="autoTranslate"></i>
+                        Auto-Translate Empty
+                    </button>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
@@ -26,11 +31,13 @@
                             <input type="text" class="form-control" id="name_en" wire:model.live="name.en">
                             @error('name.en')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
+                        @foreach($active_languages as $lang)
                         <div class="col-md-6">
-                            <label for="name_{{ $second_lang }}" class="form-label">Item Name ({{ strtoupper($second_lang) }})</label>
-                            <input type="text" class="form-control" id="name_{{ $second_lang }}" wire:model.live="name.{{ $second_lang }}">
-                            @error('name.' . $second_lang)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            <label for="name_{{ $lang }}" class="form-label">Item Name ({{ strtoupper($lang) }})</label>
+                            <input type="text" class="form-control" id="name_{{ $lang }}" wire:model.live="name.{{ $lang }}">
+                            @error('name.' . $lang)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
+                        @endforeach
                     </div>
                 </div>
             </div>

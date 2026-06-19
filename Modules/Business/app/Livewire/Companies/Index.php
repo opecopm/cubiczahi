@@ -22,8 +22,7 @@ class Index extends Component
 
     public int $perPage = 100;
 
-    // Bilingual support
-    public $secondaryLang;
+    public array $activeLanguages = [];
 
     public $model;
 
@@ -79,7 +78,8 @@ class Index extends Component
     {
         $this->sortBy = 'id';
         $this->sortDirection = 'desc';
-        $this->secondaryLang = system_setting('secondary_language', 'ar');
+        $langs = system_setting('active_languages', ['ar']);
+        $this->activeLanguages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
         $this->model = new Company;
         $this->orderable = ['id', 'name', 'code', 'is_active'];
         $this->initFilters($this->model);
@@ -87,9 +87,8 @@ class Index extends Component
 
     public function rules()
     {
-        return [
+        $rules = [
             'name.en' => 'required|string|max:255',
-            "name.{$this->secondaryLang}" => 'nullable|string|max:255',
             'code' => 'required|string|max:50|unique:companies,code,'.$this->companyId,
             'crn' => 'nullable|string|max:50',
             'trn' => 'nullable|string|max:50',
@@ -108,6 +107,12 @@ class Index extends Component
             'footerUpload' => 'nullable|image|max:5120',
             'stampUpload' => 'nullable|image|max:5120',
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $rules["name.{$lang}"] = 'nullable|string|max:255';
+            }
+        }
+        return $rules;
     }
 
     public function updatingSearch()
@@ -117,7 +122,13 @@ class Index extends Component
 
     public function resetInputFields()
     {
-        $this->name = ['en' => '', $this->secondaryLang => ''];
+        $nameArr = ['en' => ''];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $nameArr[$lang] = '';
+            }
+        }
+        $this->name = $nameArr;
         $this->code = '';
         $this->parent_id = null;
         $this->crn = '';
@@ -170,8 +181,12 @@ class Index extends Component
         // Prepare translations
         $nameTranslations = [
             'en' => $this->name['en'],
-            $this->secondaryLang => $this->name[$this->secondaryLang] ?? $this->name['en'],
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $nameTranslations[$lang] = $this->name[$lang] ?? $this->name['en'];
+            }
+        }
 
         $company = Company::create([
             'name' => $nameTranslations,
@@ -205,8 +220,12 @@ class Index extends Component
 
         $this->name = [
             'en' => $company->getTranslation('name', 'en'),
-            $this->secondaryLang => $company->getTranslation('name', $this->secondaryLang),
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $this->name[$lang] = $company->getTranslation('name', $lang);
+            }
+        }
 
         $this->code = $company->code;
         $this->parent_id = $company->parent_id;
@@ -234,8 +253,12 @@ class Index extends Component
         // Prepare translations
         $nameTranslations = [
             'en' => $this->name['en'],
-            $this->secondaryLang => $this->name[$this->secondaryLang] ?? $this->name['en'],
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $nameTranslations[$lang] = $this->name[$lang] ?? $this->name['en'];
+            }
+        }
 
         $company->update([
             'name' => $nameTranslations,
@@ -271,7 +294,7 @@ class Index extends Component
 
     public function render()
     {
-        $secondary = system_setting('secondary_language', 'ar');
+        $activeLanguages = $this->activeLanguages;
 
         $baseQuery = Company::query()->whereNull('parent_id');
 
@@ -284,12 +307,16 @@ class Index extends Component
         if ($this->search !== '') {
             $search = $this->search;
 
-            $query->where(function ($q) use ($secondary, $search) {
+            $query->where(function ($q) use ($activeLanguages, $search) {
                 $q->where('name->en', 'like', "%{$search}%")
-                    ->orWhere("name->{$secondary}", 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('crn', 'like', "%{$search}%")
                     ->orWhere('trn', 'like', "%{$search}%");
+                foreach ($activeLanguages as $lang) {
+                    if ($lang !== 'en') {
+                        $q->orWhere("name->{$lang}", 'like', "%{$search}%");
+                    }
+                }
             });
         }
 
@@ -315,7 +342,7 @@ class Index extends Component
         return view('business::livewire.companies.index', [
             'companies' => $companies,
             'parent_companies' => $parent_companies,
-            'secondaryLang' => $secondary,
+            'activeLanguages' => $activeLanguages,
             'companiesCount' => $companiesCount,
             'activeCompaniesCount' => $activeCompaniesCount,
             'inactiveCompaniesCount' => $inactiveCompaniesCount,

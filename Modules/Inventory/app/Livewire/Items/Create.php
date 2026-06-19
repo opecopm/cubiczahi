@@ -13,12 +13,13 @@ use Modules\Inventory\Models\Item;
 use Modules\Inventory\Models\ItemCategory;
 
 use function system_setting;
+use App\Services\AI\TranslationService;
 
 class Create extends Component
 {
     use WithFileUploads;
 
-    public $second_lang;
+    public array $active_languages = [];
 
     public $reference;
 
@@ -97,16 +98,15 @@ class Create extends Component
         if (request()->query('product_id')) {
             $this->product_id = request()->query('product_id');
         }
-        // ✅ Fetch the secondary language (e.g., 'ar' or 'ur')
-        $this->second_lang = system_setting('secondary_language', 'en');
+        $langs = system_setting('active_languages', ['ar']);
+        $this->active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
     }
 
     protected function rules1()
     {
-        return [
+        $rules = [
             'reference' => 'nullable|string|max:255|unique:items,reference',
             'name.en' => 'required|string|min:3',
-            "name.{$this->second_lang}" => 'nullable|string|min:3',
             'type' => 'required|string',
             'description' => 'nullable|string',
             'category_id' => 'required|exists:item_categories,id',
@@ -122,6 +122,12 @@ class Create extends Component
             'warranty_months' => 'nullable|integer|min:0',
             'primary_photo' => 'nullable|image|max:1024', // validation for photo
         ];
+
+        foreach ($this->active_languages as $lang) {
+            $rules["name.{$lang}"] = 'nullable|string|min:3';
+        }
+
+        return $rules;
     }
 
     public function updatedName($value, $key)
@@ -135,6 +141,32 @@ class Create extends Component
         }
     }
 
+    public function autoTranslate(TranslationService $translationService)
+    {
+        $englishName = $this->name['en'] ?? null;
+        if (empty(trim($englishName))) {
+            session()->flash('error', 'Please enter the Item Name (English) first.');
+            return;
+        }
+
+        foreach ($this->active_languages as $lang) {
+            if ($lang === 'en') continue;
+
+            // Only translate if empty
+            if (!empty(trim($this->name[$lang] ?? ''))) continue;
+
+            try {
+                $translatedText = $translationService->translate($englishName, $lang, 'product name');
+                if (!empty($translatedText)) {
+                    $this->name[$lang] = $translatedText;
+                }
+            } catch (\Exception $e) {
+                // Flash an error and continue
+                session()->flash('error', 'Translation failed for ' . $lang . ': ' . $e->getMessage());
+            }
+        }
+    }
+
     public function saveStep1()
     {
         try {
@@ -145,13 +177,15 @@ class Create extends Component
             if ($this->reference === '') {
                 $this->reference = null;
             }
+            $names = ['en' => $this->name['en'] ?? null];
+            foreach ($this->active_languages as $lang) {
+                $names[$lang] = $this->name[$lang] ?? ($this->name['en'] ?? null);
+            }
+
             $item = Item::create([
                 'reference' => $this->reference,
                 'type' => $this->type,
-                'name' => [
-                    'en' => $this->name['en'],
-                    $this->second_lang => $this->name[$this->second_lang] ?? $this->name['en'],
-                ],
+                'name' => $names,
                 'category_id' => $this->category_id,
                 'model_number' => $this->model_number,
                 'track_inventory' => (bool) $this->track_inventory,

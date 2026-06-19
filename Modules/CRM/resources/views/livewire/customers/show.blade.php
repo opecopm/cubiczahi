@@ -68,9 +68,6 @@
     <div class="page-body">
         <div class="container-xl">
             @php
-                $secondaryLang = system_setting('secondary_language', 'ar');
-                $companyEn = $customer->getTranslation('company', 'en');
-                $companySecondary = $customer->getTranslation('company', $secondaryLang);
                 $customerInitial = strtoupper(mb_substr($customer->name ?? '?', 0, 1));
 
                 $crDoc = $customer->generalDocuments
@@ -125,14 +122,20 @@
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <span class="text-xs text-uppercase text-secondary font-weight-bolder d-block">Company (EN)</span>
-                                            <span class="text-sm font-weight-bold">{{ $companyEn ?: '—' }}</span>
+                                            <span class="text-sm font-weight-bold">{{ $customer->getTranslation('company', 'en') ?: '—' }}</span>
                                         </div>
-                                        @if ($secondaryLang !== 'en')
-                                            <div class="col-md-6 mb-3">
-                                                <span class="text-xs text-uppercase text-secondary font-weight-bolder d-block">Company ({{ strtoupper($secondaryLang) }})</span>
-                                                <span class="text-sm font-weight-bold">{{ $companySecondary ?: '—' }}</span>
-                                            </div>
-                                        @endif
+                                        @php
+                                            $langs = system_setting('active_languages', ['ar']);
+                                            $active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
+                                        @endphp
+                                        @foreach($active_languages as $lang)
+                                            @if($lang !== 'en')
+                                                <div class="col-md-6 mb-3">
+                                                    <span class="text-xs text-uppercase text-secondary font-weight-bolder d-block">Company ({{ strtoupper($lang) }})</span>
+                                                    <span class="text-sm font-weight-bold">{{ $customer->getTranslation('company', $lang) ?: '—' }}</span>
+                                                </div>
+                                            @endif
+                                        @endforeach
                                         <div class="col-md-6 mb-3">
                                             <span class="text-xs text-uppercase text-secondary font-weight-bolder d-block">Website</span>
                                             @if($customer->website)

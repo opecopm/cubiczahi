@@ -13,9 +13,15 @@
     <div class="h-80">
         <h6 class="mb-1">
             {{ $item->name }}
-            @if($item->getTranslation('name', system_setting('secondary_language','ar')))
-                <br><small>{{ $item->getTranslation('name', system_setting('secondary_language','ar')) }}</small>
-            @endif
+            @php
+                $langs = system_setting('active_languages', ['ar']);
+                $active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
+            @endphp
+            @foreach($active_languages as $lang)
+                @if($lang !== 'en' && $item->getTranslation('name', $lang))
+                    <br><small>{{ $item->getTranslation('name', $lang) }}</small>
+                @endif
+            @endforeach
         </h6>
         <p class="mb-0 font-weight-normal text-sm">
             {{ $item->category->name ?? '' }}

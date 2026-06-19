@@ -81,7 +81,11 @@
                             <tr>
                                 <th>ID @include('components.table.sort', ['field' => 'id'])</th>
                                 <th style="width:25%">Name (EN) @include('components.table.sort', ['field' => 'name'])</th>
-                                <th style="width:25%">Name ({{ strtoupper($secondaryLang ?? 'AR') }})</th>
+                                @foreach($activeLanguages as $lang)
+                                    @if($lang !== 'en')
+                                        <th style="width:25%">Name ({{ strtoupper($lang) }})</th>
+                                    @endif
+                                @endforeach
                                 <th>Code</th>
                                 <th>CRN</th>
                                 <th>TRN</th>
@@ -91,7 +95,7 @@
                         </thead>
                         <tbody>
                             @forelse($companies as $company)
-                                @include('business::livewire.companies.company-row', ['company' => $company, 'level' => 0])
+                                @include('business::livewire.companies.company-row', ['company' => $company, 'level' => 0, 'activeLanguages' => $activeLanguages])
                             @empty
                                 <tr><td colspan="8" class="text-center text-secondary py-4">No companies found.</td></tr>
                             @endforelse
@@ -125,11 +129,15 @@
                             <input type="text" class="form-control" wire:model.defer="name.en">
                             @error('name.en')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Name ({{ strtoupper($secondaryLang ?? 'AR') }})</label>
-                            <input type="text" class="form-control" wire:model.defer="name.{{ $secondaryLang }}">
-                            @error("name.{$secondaryLang}")<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        </div>
+                        @foreach($activeLanguages as $lang)
+                            @if($lang !== 'en')
+                                <div class="col-md-6">
+                                    <label class="form-label">Name ({{ strtoupper($lang) }})</label>
+                                    <input type="text" class="form-control" wire:model.defer="name.{{ $lang }}">
+                                    @error("name.{$lang}")<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                </div>
+                            @endif
+                        @endforeach
                         <div class="col-md-6">
                             <label class="form-label">Code</label>
                             <input type="text" class="form-control" wire:model.defer="code">

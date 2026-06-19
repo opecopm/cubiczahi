@@ -25,7 +25,7 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
 
     private array $filters;
 
-    private string $secondLang;
+    private array $activeLanguages;
 
     public function __construct(
         string $mode = 'list',
@@ -37,7 +37,8 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
         $this->type = $type;
         $this->search = $search;
         $this->filters = $filters;
-        $this->secondLang = (string) system_setting('secondary_language', 'ar');
+        $langs = system_setting('active_languages', ['ar']);
+        $this->activeLanguages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
     }
 
     public function query()
@@ -175,7 +176,7 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
 
     private function detailedHeadings(): array
     {
-        return [
+        $headings = [
             'id',
             'type',
             'reference',
@@ -184,7 +185,14 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
             'brand',
             'brand_id',
             'name_en',
-            'name_ar',
+        ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $headings[] = "name_{$lang}";
+            }
+        }
+
+        return array_merge($headings, [
             'model_number',
             'warranty_months',
             'track_inventory',
@@ -207,7 +215,7 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
             'currency_rate',
             'part_id',
             'part_code',
-        ];
+        ]);
     }
 
     private function mapDetailed($item): array
@@ -215,7 +223,7 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
         $serialNumber = (string) ($item->serial_no ?? '');
         $currency = (string) ($item->currency ?? 'SAR');
 
-        return [
+        $row = [
             $item->id !== null ? (int) $item->id : null,
             (string) ($item->type ?? ''),
             (string) ($item->reference ?? ''),
@@ -224,7 +232,15 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
             (string) ($item->brand?->name ?? ''),
             $item->brand_id !== null ? (int) $item->brand_id : null,
             (string) $item->getTranslation('name', 'en'),
-            (string) $item->getTranslation('name', 'ar'),
+        ];
+        
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $row[] = (string) $item->getTranslation('name', $lang);
+            }
+        }
+
+        return array_merge($row, [
             (string) ($item->model_number ?? ''),
             $item->warranty_months !== null ? (int) $item->warranty_months : null,
             (int) (bool) $item->track_inventory,
@@ -247,7 +263,7 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
             $item->currency_rate !== null ? (float) $item->currency_rate : 1,
             $item->part_id !== null ? (int) $item->part_id : null,
             (string) ($item->part_code ?? ''),
-        ];
+        ]);
     }
 
     private function pricesQuery(): Builder
@@ -281,7 +297,14 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
             return ['reference', 'name_en', 'sell_price'];
         }
 
-        return ['reference', 'name_en', 'name_ar', 'sell_price'];
+        $headings = ['reference', 'name_en'];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $headings[] = "name_{$lang}";
+            }
+        }
+        $headings[] = 'sell_price';
+        return $headings;
     }
 
     private function mapPrices($item): array
@@ -294,12 +317,17 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
             ];
         }
 
-        return [
+        $row = [
             (string) ($item->reference ?? ''),
             (string) $item->getTranslation('name', 'en'),
-            (string) $item->getTranslation('name', 'ar'),
-            $item->sell_price !== null ? (float) $item->sell_price : null,
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $row[] = (string) $item->getTranslation('name', $lang);
+            }
+        }
+        $row[] = $item->sell_price !== null ? (float) $item->sell_price : null;
+        return $row;
     }
 
     private function quantitiesQuery(): Builder
@@ -337,14 +365,18 @@ class ItemsExport implements FromQuery, WithHeadings, WithMapping
         }
 
         $search = trim((string) $this->search);
-        $secondLang = $this->secondLang;
+        $activeLanguages = $this->activeLanguages;
 
-        return $query->where(function ($q) use ($search, $secondLang) {
+        return $query->where(function ($q) use ($search, $activeLanguages) {
             $q->where('reference', 'like', '%'.$search.'%')
                 ->orWhere('model_number', 'like', '%'.$search.'%')
                 ->orWhere('name', 'like', '%'.$search.'%')
-                ->orWhere('name->en', 'like', '%'.$search.'%')
-                ->orWhere('name->'.$secondLang, 'like', '%'.$search.'%');
+                ->orWhere('name->en', 'like', '%'.$search.'%');
+            foreach ($activeLanguages as $lang) {
+                if ($lang !== 'en') {
+                    $q->orWhere('name->'.$lang, 'like', '%'.$search.'%');
+                }
+            }
         });
     }
 

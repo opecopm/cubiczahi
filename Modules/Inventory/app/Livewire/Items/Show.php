@@ -23,7 +23,7 @@ class Show extends Component
 
     public $sell_price;
 
-    public string $second_lang = 'en';
+    public array $active_languages = [];
 
     public array $descriptions = [];
 
@@ -84,8 +84,9 @@ class Show extends Component
         $this->purchase_price = $this->item->price('purchase')->price ?? null;
         $this->sell_price = $this->item->price('sell')->price ?? null;
 
-        $this->second_lang = system_setting('secondary_language', 'en');
-        $locales = array_values(array_unique(['en', $this->second_lang]));
+        $langs = system_setting('active_languages', ['ar']);
+        $this->active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
+        $locales = array_values(array_unique(array_merge(['en'], $this->active_languages)));
 
         foreach ($locales as $locale) {
             $this->descriptions[$locale] = (string) ($this->item->getTranslation('description', $locale, false) ?? '');

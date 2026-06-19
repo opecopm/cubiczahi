@@ -7,8 +7,19 @@
     <div class="row g-3">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Description</h4>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-warning me-2" data-bs-toggle="modal" data-bs-target="#aiGenerateModal">
+                            <i class="ti ti-sparkles me-1"></i>
+                            Generate with AI
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" wire:click="autoTranslateDescriptions" wire:loading.attr="disabled">
+                            <span wire:loading wire:target="autoTranslateDescriptions" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <i class="ti ti-language me-1" wire:loading.remove wire:target="autoTranslateDescriptions"></i>
+                            Auto-Translate Empty
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="accordion" id="itemDescriptionAccordion">
@@ -34,30 +45,32 @@
                             </div>
                         </div>
 
-                        @if ($second_lang !== 'en')
+                        @foreach($active_languages as $lang)
+                        @if ($lang !== 'en')
                             <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading-description-{{ $second_lang }}">
+                                <h2 class="accordion-header" id="heading-description-{{ $lang }}">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#collapse-description-{{ $second_lang }}" aria-expanded="false"
-                                        aria-controls="collapse-description-{{ $second_lang }}">
-                                        Description ({{ strtoupper($second_lang) }})
+                                        data-bs-target="#collapse-description-{{ $lang }}" aria-expanded="false"
+                                        aria-controls="collapse-description-{{ $lang }}">
+                                        Description ({{ strtoupper($lang) }})
                                     </button>
                                 </h2>
-                                <div id="collapse-description-{{ $second_lang }}" class="accordion-collapse collapse"
-                                    aria-labelledby="heading-description-{{ $second_lang }}"
+                                <div id="collapse-description-{{ $lang }}" class="accordion-collapse collapse"
+                                    aria-labelledby="heading-description-{{ $lang }}"
                                     data-bs-parent="#itemDescriptionAccordion">
                                     <div class="accordion-body pt-3">
-                                        <input type="hidden" id="wire-description-{{ $second_lang }}" wire:model.defer="descriptions.{{ $second_lang }}">
+                                        <input type="hidden" id="wire-description-{{ $lang }}" wire:model.defer="descriptions.{{ $lang }}">
                                         <div wire:ignore>
-                                            <textarea id="tiny-description-{{ $second_lang }}">{!! $descriptions[$second_lang] ?? '' !!}</textarea>
+                                            <textarea id="tiny-description-{{ $lang }}">{!! $descriptions[$lang] ?? '' !!}</textarea>
                                         </div>
-                                        @error('descriptions.' . $second_lang)
+                                        @error('descriptions.' . $lang)
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
                             </div>
                         @endif
+                        @endforeach
 
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="heading-short-en">
@@ -81,30 +94,32 @@
                             </div>
                         </div>
 
-                        @if ($second_lang !== 'en')
+                        @foreach($active_languages as $lang)
+                        @if ($lang !== 'en')
                             <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading-short-{{ $second_lang }}">
+                                <h2 class="accordion-header" id="heading-short-{{ $lang }}">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#collapse-short-{{ $second_lang }}" aria-expanded="false"
-                                        aria-controls="collapse-short-{{ $second_lang }}">
-                                        Short Description ({{ strtoupper($second_lang) }})
+                                        data-bs-target="#collapse-short-{{ $lang }}" aria-expanded="false"
+                                        aria-controls="collapse-short-{{ $lang }}">
+                                        Short Description ({{ strtoupper($lang) }})
                                     </button>
                                 </h2>
-                                <div id="collapse-short-{{ $second_lang }}" class="accordion-collapse collapse"
-                                    aria-labelledby="heading-short-{{ $second_lang }}"
+                                <div id="collapse-short-{{ $lang }}" class="accordion-collapse collapse"
+                                    aria-labelledby="heading-short-{{ $lang }}"
                                     data-bs-parent="#itemDescriptionAccordion">
                                     <div class="accordion-body pt-3">
-                                        <input type="hidden" id="wire-short-{{ $second_lang }}" wire:model.defer="short_descriptions.{{ $second_lang }}">
+                                        <input type="hidden" id="wire-short-{{ $lang }}" wire:model.defer="short_descriptions.{{ $lang }}">
                                         <div wire:ignore>
-                                            <textarea id="tiny-short-{{ $second_lang }}">{!! $short_descriptions[$second_lang] ?? '' !!}</textarea>
+                                            <textarea id="tiny-short-{{ $lang }}">{!! $short_descriptions[$lang] ?? '' !!}</textarea>
                                         </div>
-                                        @error('short_descriptions.' . $second_lang)
+                                        @error('short_descriptions.' . $lang)
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
                             </div>
                         @endif
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -124,16 +139,18 @@
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
-                        @if ($second_lang !== 'en')
+                        @foreach($active_languages as $lang)
+                        @if ($lang !== 'en')
                             <div class="col-md-6">
-                                <label class="form-label">Meta Title ({{ strtoupper($second_lang) }})</label>
+                                <label class="form-label">Meta Title ({{ strtoupper($lang) }})</label>
                                 <input type="text" class="form-control"
-                                    wire:model.defer="seo_title.{{ $second_lang }}">
-                                @error('seo_title.' . $second_lang)
+                                    wire:model.defer="seo_title.{{ $lang }}">
+                                @error('seo_title.' . $lang)
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
                         @endif
+                        @endforeach
 
                         <div class="col-md-6">
                             <label class="form-label">Meta Description (EN)</label>
@@ -142,15 +159,17 @@
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
-                        @if ($second_lang !== 'en')
+                        @foreach($active_languages as $lang)
+                        @if ($lang !== 'en')
                             <div class="col-md-6">
-                                <label class="form-label">Meta Description ({{ strtoupper($second_lang) }})</label>
-                                <textarea rows="3" class="form-control" wire:model.defer="seo_description.{{ $second_lang }}"></textarea>
-                                @error('seo_description.' . $second_lang)
+                                <label class="form-label">Meta Description ({{ strtoupper($lang) }})</label>
+                                <textarea rows="3" class="form-control" wire:model.defer="seo_description.{{ $lang }}"></textarea>
+                                @error('seo_description.' . $lang)
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
                         @endif
+                        @endforeach
 
                         <div class="col-md-6">
                             <label class="form-label">Meta Keywords (EN)</label>
@@ -159,15 +178,17 @@
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
-                        @if ($second_lang !== 'en')
+                        @foreach($active_languages as $lang)
+                        @if ($lang !== 'en')
                             <div class="col-md-6">
-                                <label class="form-label">Meta Keywords ({{ strtoupper($second_lang) }})</label>
-                                <textarea rows="2" class="form-control" wire:model.defer="seo_keywords.{{ $second_lang }}"></textarea>
-                                @error('seo_keywords.' . $second_lang)
+                                <label class="form-label">Meta Keywords ({{ strtoupper($lang) }})</label>
+                                <textarea rows="2" class="form-control" wire:model.defer="seo_keywords.{{ $lang }}"></textarea>
+                                @error('seo_keywords.' . $lang)
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
                         @endif
+                        @endforeach
                     </div>
                 </div>
             </div>

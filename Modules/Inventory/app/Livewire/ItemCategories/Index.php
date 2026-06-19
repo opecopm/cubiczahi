@@ -21,7 +21,9 @@ class Index extends Component
 
     public string $code = '';
 
-    public string $name = '';
+    public $name = [];
+
+    public array $active_languages = [];
 
     public $parent_id;
 
@@ -40,16 +42,22 @@ class Index extends Component
 
     protected function rules()
     {
-        return [
+        $rules = [
             'code' => 'nullable|string|max:255|unique:item_categories,code,'.$this->categoryId,
-            'name' => 'required|min:2|unique:item_categories,name,'.$this->categoryId,
+            'name.en' => 'required|min:2',
             'parent_id' => 'nullable|exists:item_categories,id',
         ];
+        foreach ($this->active_languages as $lang) {
+            $rules["name.{$lang}"] = 'nullable|string|min:2';
+        }
+        return $rules;
     }
 
     public function mount()
     {
         $this->authorize('read_item_categories');
+        $langs = system_setting('active_languages', ['ar']);
+        $this->active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
         $this->sortBy = 'id'; // Default sort by ID
         $this->sortDirection = 'desc'; // Default sort direction
         $this->perPage = 100; // Default pagination limit
@@ -79,7 +87,10 @@ class Index extends Component
     public function resetInputFields()
     {
         $this->code = '';
-        $this->name = '';
+        $this->name = ['en' => ''];
+        foreach ($this->active_languages as $lang) {
+            $this->name[$lang] = '';
+        }
         $this->parent_id = '';
         $this->categoryId = '';
         $this->updateMode = false;
@@ -89,9 +100,14 @@ class Index extends Component
     {
         $this->authorize('create_item_categories');
         $this->validate();
+        $names = ['en' => $this->name['en'] ?? null];
+        foreach ($this->active_languages as $lang) {
+            $names[$lang] = $this->name[$lang] ?? ($this->name['en'] ?? null);
+        }
+
         ItemCategory::create([
             'code' => $this->code === '' ? null : $this->code,
-            'name' => $this->name,
+            'name' => $names,
             'parent_id' => $this->parent_id,
         ]);
         session()->flash('message', 'Item Category created successfully.');
@@ -104,7 +120,10 @@ class Index extends Component
         $category = ItemCategory::findOrFail($id);
         $this->categoryId = $category->id;
         $this->code = (string) ($category->code ?? '');
-        $this->name = $category->name;
+        $this->name = $category->getTranslations('name');
+        if (!isset($this->name['en'])) {
+            $this->name['en'] = $category->name;
+        }
         $this->parent_id = $category->parent_id;
         $this->updateMode = true;
         $this->showModal = true;
@@ -115,9 +134,14 @@ class Index extends Component
         $this->authorize('update_item_categories');
         $this->validate();
         $category = ItemCategory::findOrFail($this->categoryId);
+        $names = ['en' => $this->name['en'] ?? null];
+        foreach ($this->active_languages as $lang) {
+            $names[$lang] = $this->name[$lang] ?? ($this->name['en'] ?? null);
+        }
+
         $category->update([
             'code' => $this->code === '' ? null : $this->code,
-            'name' => $this->name,
+            'name' => $names,
             'parent_id' => $this->parent_id == '' ? null : $this->parent_id,
         ]);
         session()->flash('message', 'Item Category updated successfully.');
@@ -131,6 +155,17 @@ class Index extends Component
         ItemCategory::find($this->deleteId)->delete();
         session()->flash('message', 'Item Category deleted successfully.');
         $this->closeModal();
+    }
+
+    public function translateCategories(\App\Services\AI\ItemCatalogService $itemCatalogService)
+    {
+        $this->authorize('update_item_categories');
+        try {
+            $count = $itemCatalogService->translateCategories();
+            session()->flash('message', "Categories translated successfully. ({$count} translations made)");
+        } catch (\Exception $e) {
+            session()->flash('error', 'Translation failed: ' . $e->getMessage());
+        }
     }
 
     public function render()

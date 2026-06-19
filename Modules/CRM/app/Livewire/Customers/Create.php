@@ -61,7 +61,7 @@ class Create extends Component
 
     public $shipping_cities = [];
 
-    public $secondaryLang;
+    public array $activeLanguages = [];
 
     public $newGroupName;
 
@@ -71,7 +71,8 @@ class Create extends Component
 
     public function mount()
     {
-        $this->secondaryLang = system_setting('secondary_language', 'ar');
+        $langs = system_setting('active_languages', ['ar']);
+        $this->activeLanguages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
         $this->initializeWithCountryStateCityTrait();
     }
 
@@ -115,10 +116,9 @@ class Create extends Component
 
     protected function rules()
     {
-        return [
+        $rules = [
             'name' => 'required',
             'company.en' => 'nullable',
-            "company.{$this->secondaryLang}" => 'nullable',
             'email' => 'email|nullable',
             'phone' => 'required',
             'phone_code' => 'required',
@@ -142,6 +142,12 @@ class Create extends Component
             'shipping_state' => 'nullable|string',
             'shipping_city' => 'nullable|string',
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $rules["company.{$lang}"] = 'nullable';
+            }
+        }
+        return $rules;
     }
 
     public function store()
@@ -152,8 +158,12 @@ class Create extends Component
         // Prepare translations
         $companyTranslations = [
             'en' => $this->company['en'] ?? null,
-            $this->secondaryLang => $this->company[$this->secondaryLang] ?? ($this->company['en'] ?? null),
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $companyTranslations[$lang] = $this->company[$lang] ?? ($this->company['en'] ?? null);
+            }
+        }
 
         $customer = Customer::create([
             'name' => $this->name,

@@ -20,6 +20,8 @@ class Create extends Component
     
     public $activeLocale; // 👈 Current translation language being edited
 
+    public string $aiPrompt = '';
+
     protected function rules()
     {
         return [
@@ -249,5 +251,48 @@ class Create extends Component
             'parentPages' => $parentPages,
             'activeLanguages' => $activeLanguages
         ]);
+    }
+
+    public function generateFromAI(\App\Services\AI\CMSService $cmsService)
+    {
+        $this->validate([
+            'aiPrompt' => 'required|string|min:3'
+        ]);
+
+        try {
+            $data = $cmsService->generatePageContentAndSeo($this->aiPrompt);
+
+            if ($data) {
+                if (isset($data['title'])) {
+                    $this->page['title'][$this->activeLocale] = $data['title'];
+                    $this->generateSlug();
+                }
+                if (isset($data['meta_description'])) {
+                    $this->page['meta_description'][$this->activeLocale] = $data['meta_description'];
+                }
+                if (isset($data['meta_keywords'])) {
+                    $this->page['meta_keywords'][$this->activeLocale] = $data['meta_keywords'];
+                }
+                if (isset($data['content']) && $this->page['template_type'] === 'default') {
+                    $this->page['content'][$this->activeLocale] = $data['content'];
+                    
+                    // Trigger TinyMCE update or content editor update
+                    $activeLanguages = \Modules\Global\Models\Language::where('status', 'active')->get();
+                    $lang = $activeLanguages->where('code', $this->activeLocale)->first();
+                    $direction = $lang?->direction ?? 'ltr';
+
+                    $this->dispatch('contentLocaleChanged', [
+                        'content' => $data['content'],
+                        'direction' => $direction
+                    ]);
+                }
+
+                $this->aiPrompt = '';
+                $this->dispatch('close-ai-modal');
+                session()->flash('message', 'Content generated successfully!');
+            }
+        } catch (\Exception $e) {
+            session()->flash('error', 'Generation failed: ' . $e->getMessage());
+        }
     }
 }

@@ -23,7 +23,7 @@ use function system_setting;
 
 class ItemsImport implements ToModel, WithHeadingRow, WithValidation
 {
-    protected string $secondLang;
+    protected array $activeLanguages;
 
     protected array $categoryIdCache = [];
 
@@ -41,7 +41,8 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
 
     public function __construct()
     {
-        $this->secondLang = (string) system_setting('secondary_language', 'en');
+        $langs = system_setting('active_languages', ['ar']);
+        $this->activeLanguages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
     }
 
     public function model(array $row)
@@ -67,14 +68,18 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
                 ? (bool) $row['track_inventory']
                 : ($type === 'spare_part');
 
+            $nameTranslation = ['en' => $row['name_en'] ?? ''];
+            foreach ($this->activeLanguages as $lang) {
+                if ($lang !== 'en') {
+                    $nameTranslation[$lang] = $row["name_{$lang}"] ?? ($row['name_en'] ?? '');
+                }
+            }
+
             $itemAttributes = [
                 'id' => $row['id'] ?? null,
                 'reference' => $row['reference'] ?? null,
                 'type' => $type,
-                'name' => [
-                    'en' => $row['name_en'] ?? '',
-                    $this->secondLang => $row["name_{$this->secondLang}"] ?? ($row['name_en'] ?? ''),
-                ],
+                'name' => $nameTranslation,
                 'category_id' => $category_id,
                 'brand_id' => $brand_id,
                 'model_number' => $row['model_number'] ?? null,
@@ -186,11 +191,16 @@ class ItemsImport implements ToModel, WithHeadingRow, WithValidation
 
     public function customValidationAttributes(): array
     {
-        return [
+        $attributes = [
             'id' => 'ID',
             'name_en' => 'Name (EN)',
-            "name_{$this->secondLang}" => 'Name ('.strtoupper($this->secondLang).')',
         ];
+        foreach ($this->activeLanguages as $lang) {
+            if ($lang !== 'en') {
+                $attributes["name_{$lang}"] = 'Name ('.strtoupper($lang).')';
+            }
+        }
+        return $attributes;
     }
 
     protected function normalizeRow(array $row): array

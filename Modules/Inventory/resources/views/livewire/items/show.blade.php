@@ -395,9 +395,15 @@
                             </div>
                             <div class="mt-3">
                                 <h6 class="mb-0">{{ $item->getTranslation('name', 'en') }}</h6>
-                                @if($item->getTranslation('name', system_setting('secondary_language','ar')))
-                                    <div class="text-sm text-muted">{{ $item->getTranslation('name', system_setting('secondary_language','ar')) }}</div>
-                                @endif
+                                @php
+                                    $langs = system_setting('active_languages', ['ar']);
+                                    $active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
+                                @endphp
+                                @foreach($active_languages as $lang)
+                                    @if($lang !== 'en' && $item->getTranslation('name', $lang))
+                                        <div class="text-sm text-muted">{{ $item->getTranslation('name', $lang) }}</div>
+                                    @endif
+                                @endforeach
                                 <div class="text-xs text-muted mt-1">{{ $item->reference }}</div>
                             </div>
                             <button type="button" class="btn btn-sm btn-outline-secondary mt-3 mb-0 d-print-none" wire:click="openPhotoModal">

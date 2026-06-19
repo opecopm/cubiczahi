@@ -118,14 +118,17 @@ class Index extends Component
 
         if (filled($this->search)) {
             $search = trim((string) $this->search);
-            $secondLang = system_setting('secondary_language', 'ar');
+            $langs = system_setting('active_languages', ['ar']);
+            $activeLanguages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
 
-            $query->where(function ($q) use ($search, $secondLang) {
+            $query->where(function ($q) use ($search, $activeLanguages) {
                 $q->where('reference', 'like', '%'.$search.'%')
                     ->orWhere('model_number', 'like', '%'.$search.'%')
                     ->orWhere('name', 'like', '%'.$search.'%')
-                    ->orWhere('name->en', 'like', '%'.$search.'%')
-                    ->orWhere('name->'.$secondLang, 'like', '%'.$search.'%');
+                    ->orWhere('name->en', 'like', '%'.$search.'%');
+                foreach ($activeLanguages as $lang) {
+                    $q->orWhere('name->'.$lang, 'like', '%'.$search.'%');
+                }
             });
         }
 

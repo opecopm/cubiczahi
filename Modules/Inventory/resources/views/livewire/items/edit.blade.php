@@ -157,6 +157,43 @@
                     </div>
                 </div>
             </div>
+
+            <!-- AI Generate Modal -->
+            <div class="modal modal-blur fade" id="aiGenerateModal" tabindex="-1" role="dialog" wire:ignore.self
+                aria-labelledby="aiGenerateModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="aiGenerateModalLabel">
+                                <i class="ti ti-sparkles text-warning me-2"></i> Generate with AI
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <label for="aiPrompt" class="form-label">What do you want to generate?</label>
+                            <textarea class="form-control" id="aiPrompt" wire:model.defer="aiPrompt" rows="4" placeholder="e.g. Generate a description for an iPhone 14 Pro Max 256GB..."></textarea>
+                            @error('aiPrompt')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                            <div class="mt-3 text-secondary" style="font-size: 0.85rem;">
+                                This will generate and overwrite the English <strong>Description</strong> and <strong>Short Description</strong> fields.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-link link-secondary me-auto"
+                                data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary"
+                                wire:click="generateEnglishContent" wire:loading.attr="disabled" wire:target="generateEnglishContent">
+                                <span wire:loading wire:target="generateEnglishContent" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                <i class="ti ti-wand me-1" wire:loading.remove wire:target="generateEnglishContent"></i>
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -184,20 +221,22 @@
                 }
             ];
 
-            @if (($second_lang ?? 'en') !== 'en')
+            @foreach ($active_languages as $lang)
+            @if ($lang !== 'en')
                 configs.push({
-                    id: 'tiny-description-{{ $second_lang }}',
-                    inputId: 'wire-description-{{ $second_lang }}',
+                    id: 'tiny-description-{{ $lang }}',
+                    inputId: 'wire-description-{{ $lang }}',
                     toolbar: 'blocks | bold italic underline strikethrough | bullist numlist | blockquote link | removeformat',
                     height: 240
                 });
                 configs.push({
-                    id: 'tiny-short-{{ $second_lang }}',
-                    inputId: 'wire-short-{{ $second_lang }}',
+                    id: 'tiny-short-{{ $lang }}',
+                    inputId: 'wire-short-{{ $lang }}',
                     toolbar: 'bold italic underline | bullist numlist | link | removeformat',
                     height: 140
                 });
             @endif
+            @endforeach
 
             function syncToWireInput(cfg, content) {
                 var input = document.getElementById(cfg.inputId);
@@ -285,7 +324,34 @@
             }
 
             attachHooks();
-            document.addEventListener('livewire:initialized', attachHooks);
+            document.addEventListener('livewire:initialized', function () {
+                attachHooks();
+                Livewire.on('close-ai-modal', function () {
+                    var modalEl = document.getElementById('aiGenerateModal');
+                    if (modalEl) {
+                        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        modal.hide();
+                        
+                        // Fix for modal backdrop sometimes getting stuck
+                        var backdrop = document.querySelector('.modal-backdrop');
+                        if (backdrop) {
+                            backdrop.remove();
+                        }
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('overflow');
+                        document.body.style.removeProperty('padding-right');
+                    }
+                });
+                Livewire.on('tinymce-content-updated', function (data) {
+                    var item = data[0];
+                    if (typeof tinymce !== 'undefined') {
+                        var editor = tinymce.get(item.id);
+                        if (editor) {
+                            editor.setContent(item.content);
+                        }
+                    }
+                });
+            });
             document.addEventListener('shown.bs.collapse', scheduleInit);
             document.addEventListener('inventory-item-step4-opened', scheduleInit);
             scheduleInit();

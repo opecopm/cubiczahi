@@ -2,7 +2,7 @@
     <td class="text-secondary">{{ $category->id }}</td>
     <td>{{ $category->code }}</td>
     <td>
-        {!! str_repeat('&mdash; ', $level) !!} {{ $category->name }}
+        {!! str_repeat('&mdash; ', $level) !!} {{ collect($category->getTranslations('name'))->filter()->join(' / ') }}
     </td>
     <td>{{ $category->parent->name ?? 'N/A' }}</td>
     <td class="w-1">

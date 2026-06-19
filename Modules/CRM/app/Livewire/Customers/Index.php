@@ -44,7 +44,6 @@ class Index extends Component
 
         $this->model = new Customer;
         $this->initFilters($this->model);
-        $this->secondaryLang = system_setting('secondary_language', 'ar');
     }
 
     public function delete()
