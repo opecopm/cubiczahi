@@ -23,6 +23,8 @@ class Show extends Component
 
     public $sell_price;
 
+    public $second_lang = 'ar';
+
     public array $active_languages = [];
 
     public array $descriptions = [];
@@ -86,6 +88,7 @@ class Show extends Component
 
         $langs = system_setting('active_languages', ['ar']);
         $this->active_languages = is_string($langs) ? (json_decode($langs, true) ?? [$langs]) : $langs;
+        $this->second_lang = $this->active_languages[0] ?? 'ar';
         $locales = array_values(array_unique(array_merge(['en'], $this->active_languages)));
 
         foreach ($locales as $locale) {
