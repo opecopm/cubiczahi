@@ -127,8 +127,20 @@
 
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">SEO</h4>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-warning me-2" wire:click="generateSeoTags" wire:loading.attr="disabled">
+                            <span wire:loading wire:target="generateSeoTags" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <i class="ti ti-sparkles me-1" wire:loading.remove wire:target="generateSeoTags"></i>
+                            Generate with AI
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" wire:click="autoTranslateSeo" wire:loading.attr="disabled">
+                            <span wire:loading wire:target="autoTranslateSeo" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <i class="ti ti-language me-1" wire:loading.remove wire:target="autoTranslateSeo"></i>
+                            Auto-Translate Empty
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">

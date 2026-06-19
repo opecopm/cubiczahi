@@ -418,6 +418,88 @@ class Edit extends Component
         }
     }
 
+    public function generateSeoTags(\App\Services\AI\CMSService $cmsService)
+    {
+        $content = $this->descriptions['en'] ?? $this->short_descriptions['en'] ?? $this->name['en'] ?? '';
+        
+        if (empty(trim($content))) {
+            session()->flash('error', 'Please enter a description or name (EN) first to generate SEO tags.');
+            return;
+        }
+
+        try {
+            $data = $cmsService->generateSeoTags($content);
+
+            if ($data) {
+                if (isset($data['title'])) {
+                    $this->seo_title['en'] = $data['title'];
+                }
+                if (isset($data['description'])) {
+                    $this->seo_description['en'] = $data['description'];
+                }
+                if (isset($data['keywords'])) {
+                    $this->seo_keywords['en'] = $data['keywords'];
+                }
+
+                session()->flash('message', 'English SEO tags generated successfully!');
+            }
+        } catch (\Exception $e) {
+            session()->flash('error', 'SEO Generation failed: ' . $e->getMessage());
+        }
+    }
+
+    public function autoTranslateSeo(TranslationService $translationService)
+    {
+        $englishTitle = $this->seo_title['en'] ?? null;
+        $englishDesc = $this->seo_description['en'] ?? null;
+        $englishKeywords = $this->seo_keywords['en'] ?? null;
+
+        if (empty(trim($englishTitle ?? '')) && empty(trim($englishDesc ?? '')) && empty(trim($englishKeywords ?? ''))) {
+            session()->flash('error', 'Please generate or enter English SEO tags first.');
+            return;
+        }
+
+        foreach ($this->active_languages as $lang) {
+            if ($lang === 'en') continue;
+
+            // Title
+            if (!empty(trim($englishTitle ?? '')) && empty(trim($this->seo_title[$lang] ?? ''))) {
+                try {
+                    $translatedText = $translationService->translate($englishTitle, $lang, 'SEO title');
+                    if (!empty($translatedText)) {
+                        $this->seo_title[$lang] = $translatedText;
+                    }
+                } catch (\Exception $e) {
+                    session()->flash('error', 'Translation failed for SEO Title ' . $lang . ': ' . $e->getMessage());
+                }
+            }
+
+            // Description
+            if (!empty(trim($englishDesc ?? '')) && empty(trim($this->seo_description[$lang] ?? ''))) {
+                try {
+                    $translatedText = $translationService->translate($englishDesc, $lang, 'SEO description');
+                    if (!empty($translatedText)) {
+                        $this->seo_description[$lang] = $translatedText;
+                    }
+                } catch (\Exception $e) {
+                    session()->flash('error', 'Translation failed for SEO Description ' . $lang . ': ' . $e->getMessage());
+                }
+            }
+
+            // Keywords
+            if (!empty(trim($englishKeywords ?? '')) && empty(trim($this->seo_keywords[$lang] ?? ''))) {
+                try {
+                    $translatedText = $translationService->translate($englishKeywords, $lang, 'SEO keywords (comma separated)');
+                    if (!empty($translatedText)) {
+                        $this->seo_keywords[$lang] = $translatedText;
+                    }
+                } catch (\Exception $e) {
+                    session()->flash('error', 'Translation failed for SEO Keywords ' . $lang . ': ' . $e->getMessage());
+                }
+            }
+        }
+    }
+
     public function saveStep1()
     {
         try {
